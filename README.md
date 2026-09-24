@@ -1,4 +1,4 @@
-# 6. Common Mistakes
+# 6. Common Mistakes 
 # Mistake 1 — [การใช้ var ใน Loop ที่มีโค้ด Asynchronous]
 
 **Problem**
