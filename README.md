@@ -116,9 +116,9 @@ add();
 
 ---
 
-## 8. Exercises
+# 8. Exercises
 
-### Exercise 1 — `Once Function`
+# Exercise 1 — `Once Function`
 
 **Problem**
 
@@ -173,7 +173,7 @@ console.log(initializeApp('OtherSystem'));
 
 ---
 
-### Exercise 2 — `Higher-Order Array Filter Generator`
+# Exercise 2 — `Higher-Order Array Filter Generator`
 
 **Problem**
 
@@ -181,7 +181,7 @@ console.log(initializeApp('OtherSystem'));
 
 **Hint**
 
-`ใช้หลักการ Higher-Order Function และ Closure โดยฟังก์ชัน createFilter จะคืนค่าฟังก์ชันที่รับออบเจกต์ item เข้ามา แล้วนำค่า item[property] ไปส่งต่อให้ conditionFn(val) เพื่อรีเทิร์นค่า Boolean (true/false)`
+`ใช้หลักการ Higher-Order Function และ Closure โดยฟังก์ชัน createFilter จะคืนค่าฟังก์ชันที่รับออบเจกต์ item เข้ามา แล้วนำค่า item[property]  ไปส่งต่อให้ conditionFn(val) เพื่อรีเทิร์นค่า Boolean (true/false)`
 
 **Solution**
 
@@ -213,7 +213,6 @@ console.log(products.filter(isNameStartsWithK));
 
 **Explanation**
 
-[อธิบายแนวทางแก้]
 1.) createFilter ทำหน้าที่เป็น Factory สร้างฟังก์ชันสำหรับคัดกรอง โดยจำค่า property และ conditionFn ไว้ใน Closure
 
 2.) ฟังก์ชันที่ถูกคืนค่ากลับมาจะรับ item จาก .filter() ทีละตัว แล้วดึงค่า item[property] ออกมา
