@@ -1,9 +1,9 @@
 # 7. Common Mistakes
-# Mistake 1 — [การใช้ var ใน Loop ที่มีโค้ด Asynchronous]
+# Mistake 1 — การใช้ var ใน Loop ที่มีโค้ด Asynchronous
 
 **Problem**
 
-[การใช้ var ประกาศตัวแปรใน Loop ที่มีโค้ด Asynchronous เช่น setTimeout() อาจทำให้ Callback ทุกตัวอ้างอิงถึงตัวแปร i เดียวกัน เมื่อ Callback ทำงานภายหลัง Loop จบไปแล้ว ค่า i จึงกลายเป็นค่าหลังจากจบ Loop]
+การใช้ var ประกาศตัวแปรใน Loop ที่มีโค้ด Asynchronous เช่น setTimeout() อาจทำให้ Callback ทุกตัวอ้างอิงถึงตัวแปร i เดียวกัน เมื่อ Callback ทำงานภายหลัง Loop จบไปแล้ว ค่า i จึงกลายเป็นค่าหลังจากจบ Loop
 
 **Incorrect Code**
 
@@ -39,52 +39,80 @@ for (let i = 1; i <= 3; i++) {
 
 **Why?**
 
-[var มีขอบเขตแบบ Function Scope ดังนั้นในตัวอย่างนี้จึงมีตัวแปร i ที่ Callback ทั้งหมดอ้างอิงร่วมกัน เมื่อ for Loop ทำงานจนจบ ค่า i จะเป็น 4 แล้ว และ Callback ที่ทำงานภายหลังจึงอ่านค่า 4 เหมือนกันทั้งหมด
+var มีขอบเขตแบบ Function Scope ดังนั้นในตัวอย่างนี้จึงมีตัวแปร i ที่ Callback ทั้งหมดอ้างอิงร่วมกัน เมื่อ for Loop ทำงานจนจบ ค่า i จะเป็น 4 แล้ว และ Callback ที่ทำงานภายหลังจึงอ่านค่า 4 เหมือนกันทั้งหมด
 
-ในทางกลับกัน let มีขอบเขตแบบ Block Scope และใน for Loop จะมี binding ของ i สำหรับแต่ละรอบ ทำให้ Callback ของแต่ละรอบสามารถเข้าถึงค่าของ i ที่สอดคล้องกับรอบนั้น]
+ในทางกลับกัน let มีขอบเขตแบบ Block Scope และใน for Loop จะมี binding ของ i สำหรับแต่ละรอบ ทำให้ Callback ของแต่ละรอบสามารถเข้าถึงค่าของ i ที่สอดคล้องกับรอบนั้น
 
 ---
 
-# Mistake 2 — [เปลี่ยนแปลงข้อมูลใน State หรือ Array โดยตรง (Mutating State)]
+# Mistake 2 — Closure เก็บ &mut ทำให้ใช้ตัวแปรข้างนอกไม่ได้
 
 **Problem**
 
-[การแก้ไข Array หรือ Object ที่อยู่ใน State โดยตรง อาจทำให้ React ไม่ตรวจพบการเปลี่ยนแปลงตามที่คาดไว้ เพราะเราไม่ได้สร้าง Reference ใหม่ให้กับ State]
+ต้องการให้ Closure เพิ่มค่า count แล้วหลังจากเรียก Closure ต้องการนำ count ไปใช้ต่อ แต่เกิด error เพราะ Closure ยังถือ mutable borrow อยู่
 
 **Incorrect Code**
 
 ```javascript
-const [items, setItems] = useState(['A', 'B']);
+fn main() {
+    let mut count = 0;
 
-const addItem = () => {
-  items.push('C'); // ยัดค่าลง Array เดิมตรงๆ 
-  setItems(items); // React จะมองว่าเป็น Array ตัวเดิม จึงไม่ re-render
-};
+    let add = || {
+        count += 1;
+    };
+
+    add();
+
+    println!("{}", count);
+}
 ```
 **Output**
 ```javascript
-['A', 'B']
+error[E0596]: cannot borrow `add` as mutable, as it is not declared as mutable
+
 ```
 
 **Correct Code**
 
 ```javascript
-const [items, setItems] = useState(['A', 'B']);
+fn main() {
+    let mut count = 0;
 
-const addItem = () => {
-  setItems([...items, 'C']); // สร้าง Array ใหม่ขึ้นมารับค่าเดิม + ค่าใหม่
-};
+    let mut add = || {
+        count += 1;
+    };
+
+    add();
+
+    println!("{}", count);
+}
 ```
 **Output**
 ```javascript
-['A', 'B', 'C']
+1
 ```
 
 **Why?**
 
-[การใช้ .push() เป็นการ Mutate Array เดิม ซึ่งหมายความว่า Reference ของ Array ไม่เปลี่ยนแปลง 
+Closure มีการแก้ไข count:
+```javascript
+count += 1;
+```
+ดังนั้น Closure ต้อง mutably borrow count
 
-ในทางกลับกัน Spread Operator: setItems([...items, 'C']); จะสร้าง Array object ใหม่ขึ้นมา โดยนำสมาชิกเดิมมารวมกับ 'C']
+จึงทำให้ Closure นี้เป็น FnMut และตัวแปรที่เก็บ Closure ต้องประกาศเป็น mut:
+
+```javascript
+let mut add = || {
+    count += 1;
+};
+```
+จากนั้นจึงเรียก:
+
+```javascript
+add();
+```
+การเรียก Closure สามารถเปลี่ยนแปลง state ที่มัน capture เอาไว้ได้ ดังนั้นตัวแปร add ที่เก็บ Closure จึงต้องประกาศเป็น mut ด้วย ไม่ใช่แค่ count ที่ต้องเป็น mut เท่านั้น เพราะ Rust มองว่าการเรียก add() ในกรณีนี้เป็นการใช้งาน Closure แบบ mutable หากเขียน let add = ... ตัว add จะไม่สามารถถูกยืมแบบ mutable ตอนเรียก add() ได้ จึงเกิด error ขึ้น การแก้ปัญหาคือเปลี่ยนเป็น let mut add = ... เพื่ออนุญาตให้ Closure ถูกเรียกในลักษณะที่สามารถเปลี่ยนแปลงค่าที่มัน capture ไว้ได้
 
 ---
 
