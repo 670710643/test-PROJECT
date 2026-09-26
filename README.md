@@ -80,7 +80,7 @@ fn factory() -> impl Fn(i32) -> i32 {
 
 ---
 
-## Mistake 2 — ลืมใช้ move ตอนคืน Closure ที่ capture ตัวแปรภายในฟังก์ชัน
+## Mistake 2 — ลืมใช้ `move` ตอนคืน Closure ที่ capture ตัวแปรภายในฟังก์ชัน
 
 **Problem**
 
@@ -148,18 +148,18 @@ Box::new(move |x| x + num)
 
 # 8. Exercises
 
-# Exercise 1 — `Once Function`
+## Exercise 1 — Once Function
 
 **Problem**
 
-`จงเขียน Higher-Order Function ชื่อ once(fn) ที่รับฟังก์ชัน fn เข้ามา แล้วคืนค่าเป็นฟังก์ชันใหม่ที่สามารถ เรียกทำงานได้เพียงครั้งเดียวเท่านั้น
-เมื่อเรียกใช้งานครั้งแรก ให้ทำการประมวลผลและคืนค่าผลลัพธ์ของ fn ตามปกติ
-หากมีการเรียกใช้งานในครั้งถัดๆ ไป ไม่ว่าจะส่งพารามิเตอร์อะไรมาก็ตาม ให้คืนค่าผลลัพธ์เดิมที่เคยคำนวณได้จากครั้งแรก โดยไม่มีการเรียกใช้ fn ซ้ำอีก
-`
+จงเขียน Higher-Order Function ชื่อ `once(fn)` ที่รับฟังก์ชัน `fn` เข้ามา แล้วคืนค่าเป็นฟังก์ชันใหม่ที่สามารถ เรียกทำงานได้เพียงครั้งเดียวเท่านั้น
+เมื่อเรียกใช้งานครั้งแรก ให้ทำการประมวลผลและคืนค่าผลลัพธ์ของ `fn` ตามปกติ
+หากมีการเรียกใช้งานในครั้งถัด ๆ ไป ไม่ว่าจะส่งพารามิเตอร์อะไร ให้คืนค่าผลลัพธ์เดิมที่เคยคำนวณได้จากครั้งแรก โดยไม่มีการเรียกใช้ `fn` ซ้ำอีก
+
 
 **Hint**
 
-`ใช้ Closure ในการเก็บสถานะด้วยตัวแปร Boolean (เช่น hasRun) เพื่อเช็กว่าฟังก์ชันเคยถูกเรียกหรือยัง และเก็บตัวแปร result เพื่อจำผลลัพธ์จากการเรียกใช้งานครั้งแรกไว้`
+ใช้ Closure ในการเก็บสถานะด้วยตัวแปร `Boolean` (เช่น `hasRun`) เพื่อเช็กว่าฟังก์ชันเคยถูกเรียกหรือยัง และเก็บตัวแปร `result` เพื่อจำผลลัพธ์จากการเรียกใช้งานครั้งแรกไว้
 
 **Solution**
 ```javascript
@@ -193,25 +193,25 @@ console.log(initializeApp('OtherSystem'));
 
 **Explanation**
 
-1.) once สร้างขอบเขตตัวแปรด้วย Closure เพื่อเก็บตัวแปร hasRun และ result
+1. `once` สร้างขอบเขตตัวแปรด้วย Closure เพื่อเก็บตัวแปร `hasRun` และ `result`
 
-2.) ฟังก์ชันที่ถูกคืนค่ากลับไปจะตรวจสอบ hasRun ก่อนเสมอ
+2. ฟังก์ชันที่ถูกคืนค่ากลับไปจะตรวจสอบ `hasRun` ก่อนเสมอ
 
-3.) ในการเรียกครั้งแรก hasRun ยังเป็น false ทำให้โค้ดรันฟังก์ชัน fn(...args) บันทึกผลลัพธ์ลง result แล้วเปลี่ยน hasRun เป็น true
+3. ในการเรียกครั้งแรก `hasRun` ยังเป็น `false` ทำให้โค้ดรันฟังก์ชัน `fn(...args)` บันทึกผลลัพธ์ลง `result` แล้วเปลี่ยน `hasRun` เป็น `true`
 
-4.) การเรียกครั้งถัดไป hasRun เป็น true แล้ว ระบบจะข้ามการประมวลผล fn และคืนค่า result เดิมทันที
+4. การเรียกครั้งถัดไป `hasRun` เป็น `true` แล้ว ระบบจะข้ามการประมวลผล `fn` และคืนค่า `result` เดิมทันที
 
 ---
 
-# Exercise 2 — `Higher-Order Array Filter Generator`
+## Exercise 2 — Higher-Order Array Filter Generator
 
 **Problem**
 
-`จงเขียนฟังก์ชัน createFilter(property, conditionFn) ที่รับชื่อ property ของ Object และฟังก์ชันเงื่อนไข conditionFn จากนั้นคืนค่าเป็น Predicate Function ที่สามารถนำไปใช้กับ .filter() ของ Array เพื่อคัดกรองข้อมูลตามเงื่อนไขที่กำหนดได้`
+จงเขียนฟังก์ชัน `createFilter(property, conditionFn)` ที่รับชื่อ `property` ของ Object และฟังก์ชันเงื่อนไข `conditionFn` จากนั้นคืนค่าเป็น Predicate Function ที่สามารถนำไปใช้กับ `.filter()` ของ Array เพื่อคัดกรองข้อมูลตามเงื่อนไขที่กำหนดได้
 
 **Hint**
 
-`ใช้หลักการ Higher-Order Function และ Closure โดยฟังก์ชัน createFilter จะคืนค่าฟังก์ชันที่รับออบเจกต์ item เข้ามา แล้วนำค่า item[property]  ไปส่งต่อให้ conditionFn(val) เพื่อรีเทิร์นค่า Boolean (true/false)`
+ใช้หลักการ Higher-Order Function และ Closure โดยฟังก์ชัน `createFilter` จะคืนค่าฟังก์ชันที่รับออบเจกต์ `item` เข้ามา แล้วนำค่า `item[property]` ไปส่งต่อให้ `conditionFn(val)` เพื่อรีเทิร์นค่า Boolean (`true`/`false`)
 
 **Solution**
 
@@ -243,13 +243,13 @@ console.log(products.filter(isNameStartsWithK));
 
 **Explanation**
 
-1.) createFilter ทำหน้าที่เป็น Factory สร้างฟังก์ชันสำหรับคัดกรอง โดยจำค่า property และ conditionFn ไว้ใน Closure
+1. `createFilter` ทำหน้าที่เป็น Factory สร้างฟังก์ชันสำหรับคัดกรอง โดยจำค่า `property` และ `conditionFn` ไว้ใน Closure
 
-2.) ฟังก์ชันที่ถูกคืนค่ากลับมาจะรับ item จาก .filter() ทีละตัว แล้วดึงค่า item[property] ออกมา
+2. ฟังก์ชันที่ถูกคืนค่ากลับมาจะรับ `item จาก` `.filter()` ทีละตัว แล้วดึงค่า `item[property]` ออกมา
 
-3.) ส่งค่านั้นเข้าไปใน conditionFn เพื่อคืนค่ากลับมาเป็น true หรือ false ให้กับ .filter()
+3. ส่งค่านั้นเข้าไปใน `conditionFn` เพื่อคืนค่ากลับมาเป็น `true` หรือ `false` ให้กับ `.filter()`
 
-4.) วิธีนี้ช่วยให้เราเขียนโค้ดสไตล์ Functional Programming ที่อ่านง่าย และสามารถนำ Filter Logic กลับมาใช้ซ้ำ (Reusable) ได้อย่างยืดหยุ่น
+4. วิธีนี้ช่วยให้เราเขียนโค้ดสไตล์ Functional Programming ที่อ่านง่าย และสามารถนำ Filter Logic กลับมาใช้ซ้ำ (Reusable) ได้อย่างยืดหยุ่น
 
 ---
 
