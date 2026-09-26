@@ -1,47 +1,89 @@
 # 7. Common Mistakes
-# Mistake 1 — การใช้ var ใน Loop ที่มีโค้ด Asynchronous
+# Mistake 1 — Closure แชร์ State โดยไม่ตั้งใจ
 
 **Problem**
 
-การใช้ var ประกาศตัวแปรใน Loop ที่มีโค้ด Asynchronous เช่น setTimeout() อาจทำให้ Callback ทุกตัวอ้างอิงถึงตัวแปร i เดียวกัน เมื่อ Callback ทำงานภายหลัง Loop จบไปแล้ว ค่า i จึงกลายเป็นค่าหลังจากจบ Loop
+การกำหนด counter2 = counter1 ทำให้ counter1 และ counter2 อ้างอิง Object เดียวกัน จึงใช้ Closure และ State (count) ชุดเดียวกัน เมื่อ counter1 เปลี่ยนค่า count ค่าเดียวกันนั้นจึงสามารถเข้าถึงได้ผ่าน counter2 ด้วย
 
 **Incorrect Code**
 
 ```javascript
-for (var i = 1; i <= 3; i++) {
-  setTimeout(() => {
-    console.log(i); // พิมพ์ค่า 4 ออกมา 3 รอบ
-  }, 1000);
+function createCounter() {
+  let count = 0;
+
+  return {
+    increment: () => ++count,
+    getCount: () => count
+  };
 }
+
+const counter1 = createCounter();
+const counter2 = counter1;
+
+counter1.increment();
+counter1.increment();
+
+console.log(counter2.getCount());
+
 ```
 **Output**
 ```javascript
-4
-4
-4
+2
 ```
 
 **Correct Code**
 
 ```javascript
-for (let i = 1; i <= 3; i++) {
-  setTimeout(() => {
-    console.log(i); // พิมพ์ค่า 1, 2, 3 ตามลำดับ
-  }, 1000);
+function createCounter() {
+  let count = 0;
+
+  return {
+    increment: () => ++count,
+    getCount: () => count
+  };
 }
+
+const counter1 = createCounter();
+const counter2 = createCounter();
+
+counter1.increment();
+counter1.increment();
+
+console.log(counter1.getCount());
+console.log(counter2.getCount());
+
 ```
 **Output**
 ```javascript
-1
 2
-3
+0
 ```
 
 **Why?**
 
-var มีขอบเขตแบบ Function Scope ดังนั้นในตัวอย่างนี้จึงมีตัวแปร i ที่ Callback ทั้งหมดอ้างอิงร่วมกัน เมื่อ for Loop ทำงานจนจบ ค่า i จะเป็น 4 แล้ว และ Callback ที่ทำงานภายหลังจึงอ่านค่า 4 เหมือนกันทั้งหมด
+สิ่งสำคัญคือความแตกต่างระหว่าง:
 
-ในทางกลับกัน let มีขอบเขตแบบ Block Scope และใน for Loop จะมี binding ของ i สำหรับแต่ละรอบ ทำให้ Callback ของแต่ละรอบสามารถเข้าถึงค่าของ i ที่สอดคล้องกับรอบนั้น
+```javascript
+const counter2 = counter1;
+```
+ไม่ได้สร้าง Counter และ Closure ใหม่ แต่ทำให้ counter2 อ้างอิง Object เดียวกับ counter1
+
+เป็นการอ้างอิง Object เดียวกัน ทำให้ใช้ State เดียวกัน
+
+```javascript
+const counter1 = createCounter();
+const counter2 = createCounter();
+```
+แต่ละครั้งจะสร้าง Object, Closure และตัวแปร count ชุดใหม่
+
+```javascript
+counter1 → Closure → count = 2
+counter2 → Closure → count = 0
+```
+ดังนั้นแต่ละ Counter จึงมี State แยกจากกัน
+
+เป็นการสร้าง Object และ Closure ใหม่ ทำให้แต่ละ Counter มี State เป็นของตัวเอง
+
 
 ---
 
