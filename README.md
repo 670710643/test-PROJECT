@@ -1,160 +1,148 @@
 # 7. Common Mistakes
-# Mistake 1 — Closure แชร์ State โดยไม่ตั้งใจ
+
+## Mistake 1 — พยายามคืน `Fn(...)` ตรง ๆ จากฟังก์ชัน
 
 **Problem**
 
-การกำหนด counter2 = counter1 ทำให้ counter1 และ counter2 อ้างอิง Object เดียวกัน จึงใช้ Closure และ State (count) ชุดเดียวกัน เมื่อ counter1 เปลี่ยนค่า count ค่าเดียวกันนั้นจึงสามารถเข้าถึงได้ผ่าน counter2 ด้วย
+ต้องการคืน Closure จากฟังก์ชันโดยระบุชนิดคืนค่าเป็น `Fn(...)` ตรง ๆ แต่เกิด error เพราะ `Fn(...)` เป็น trait ไม่ใช่ concrete type และ trait ตรง ๆ ไม่มีขนาดแน่นอนในช่วง compile time ขณะที่ Rust ต้องรู้ขนาดของค่าที่ฟังก์ชันจะคืนเสมอ
 
 **Incorrect Code**
 
-```javascript
-function createCounter() {
-  let count = 0;
+```rust
+fn factory() -> Fn(i32) -> i32 {
+    let num = 5;
 
-  return {
-    increment: () => ++count,
-    getCount: () => count
-  };
+    |x| x + num
 }
 
-const counter1 = createCounter();
-const counter2 = counter1;
-
-counter1.increment();
-counter1.increment();
-
-console.log(counter2.getCount());
-
+fn main() {
+    let f = factory();
+    println!("{}", f(1));
+}
 ```
 **Output**
-```javascript
-2
+```rust
+error[E0277]: the trait bound Fn(i32) -> i32: Sized is not satisfied
+
 ```
 
 **Correct Code**
 
-```javascript
-function createCounter() {
-  let count = 0;
+```rust
+fn factory() -> Box<dyn Fn(i32) -> i32> {
+    let num = 5;
 
-  return {
-    increment: () => ++count,
-    getCount: () => count
-  };
+    Box::new(move |x| x + num)
 }
 
-const counter1 = createCounter();
-const counter2 = createCounter();
-
-counter1.increment();
-counter1.increment();
-
-console.log(counter1.getCount());
-console.log(counter2.getCount());
-
+fn main() {
+    let f = factory();
+    println!("{}", f(1));
+}
 ```
 **Output**
-```javascript
-2
-0
+```rust
+6
 ```
 
 **Why?**
 
-สิ่งสำคัญคือความแตกต่างระหว่าง:
+ในโค้ดนี้มีการพยายามคืนค่าเป็น:
 
-```javascript
-const counter2 = counter1;
+```rust
+Fn(i32) -> i32
 ```
-ไม่ได้สร้าง Counter และ Closure ใหม่ แต่ทำให้ counter2 อ้างอิง Object เดียวกับ counter1
 
-เป็นการอ้างอิง Object เดียวกัน ทำให้ใช้ State เดียวกัน
+แต่ `Fn(i32) -> i32` เป็น trait ไม่ใช่ชนิดข้อมูลแบบ concrete ที่มีขนาดแน่นอน
+Rust จึงไม่สามารถรู้ได้ว่าค่าที่จะคืนจากฟังก์ชันมีขนาดเท่าไรในช่วง compile time
 
-```javascript
-const counter1 = createCounter();
-const counter2 = createCounter();
+ฟังก์ชันใน Rust ต้องมีชนิดคืนค่าที่ทราบขนาดแน่นอน เว้นแต่จะใช้การห่อด้วยชนิดที่มีขนาดแน่นอน เช่น pointer หรือ smart pointer
+
+ดังนั้นแนวทางที่ใช้ได้คือห่อ Closure ด้วย `Box<dyn Fn(i32) -> i32>`:
+
+```rust
+fn factory() -> Box<dyn Fn(i32) -> i32> {
+    let num = 5;
+
+    Box::new(move |x| x + num)
+}
 ```
-แต่ละครั้งจะสร้าง Object, Closure และตัวแปร count ชุดใหม่
+`Box` มีขนาดแน่นอน จึงสามารถใช้เป็นชนิดคืนค่าของฟังก์ชันได้ ส่วน `dyn Fn(...)` คือ trait object ที่ใช้แทน Closure ที่แท้จริงซึ่งมีชนิดเป็น anonymous type
 
-```javascript
-counter1 → Closure → count = 2
-counter2 → Closure → count = 0
+
+ใน Rust สมัยใหม่ อีกทางเลือกหนึ่งคือใช้ `impl Fn(i32) -> i32` หากฟังก์ชันคืน Closure เพียงชนิดเดียว
+```rust
+fn factory() -> impl Fn(i32) -> i32 {
+    let num = 5;
+    move |x| x + num
+}
 ```
-ดังนั้นแต่ละ Counter จึงมี State แยกจากกัน
-
-เป็นการสร้าง Object และ Closure ใหม่ ทำให้แต่ละ Counter มี State เป็นของตัวเอง
-
 
 ---
 
-# Mistake 2 — Closure เก็บ &mut ทำให้ใช้ตัวแปรข้างนอกไม่ได้
+## Mistake 2 — ลืมใช้ move ตอนคืน Closure ที่ capture ตัวแปรภายในฟังก์ชัน
 
 **Problem**
 
-ต้องการให้ Closure เพิ่มค่า count แล้วหลังจากเรียก Closure ต้องการนำ count ไปใช้ต่อ แต่เกิด error เพราะ Closure ยังถือ mutable borrow อยู่
+ต้องการคืน Closure จากฟังก์ชัน และ Closure นั้นมีการใช้งานตัวแปร `num` ที่อยู่ภายในฟังก์ชันเดียวกัน แต่เกิด error เพราะแม้จะใช้ `Box` เพื่อเก็บ Closure แล้ว ก็ยังไม่เพียงพอ หาก Closure ยัง borrow ตัวแปรจาก stack frame เดิมของฟังก์ชันอยู่ จึงต้องใช้ `move` เพื่อย้ายค่าที่ capture เข้าไปใน Closure โดยตรง
 
 **Incorrect Code**
 
-```javascript
-fn main() {
-    let mut count = 0;
+```rust
+fn factory() -> Box<dyn Fn(i32) -> i32> {
+    let num = 5;
 
-    let add = || {
-        count += 1;
-    };
-
-    add();
-
-    println!("{}", count);
+    Box::new(|x| x + num)
 }
-```
-**Output**
-```javascript
-error[E0596]: cannot borrow `add` as mutable, as it is not declared as mutable
 
+fn main() {
+    let f = factory();
+    println!("{}", f(1));
+}
+
+```
+
+**Output**
+```rust
+error[E0373]: closure may outlive the current function, but it borrows `num`
 ```
 
 **Correct Code**
 
-```javascript
+```rust
+fn factory() -> Box<dyn Fn(i32) -> i32> {
+    let num = 5;
+
+    Box::new(move |x| x + num)
+}
+
 fn main() {
-    let mut count = 0;
-
-    let mut add = || {
-        count += 1;
-    };
-
-    add();
-
-    println!("{}", count);
+    let f = factory();
+    println!("{}", f(1));
 }
 ```
 **Output**
-```javascript
-1
+```rust
+6
 ```
 
 **Why?**
 
-Closure มีการแก้ไข count:
-```javascript
-count += 1;
-```
-ดังนั้น Closure ต้อง mutably borrow count
+ในโค้ดนี้ Closure มีการอ้างถึงตัวแปร `num`
 
-จึงทำให้ Closure นี้เป็น FnMut และตัวแปรที่เก็บ Closure ต้องประกาศเป็น mut:
-
-```javascript
-let mut add = || {
-    count += 1;
-};
+```rust
+|x| x + num
 ```
-จากนั้นจึงเรียก:
+ถ้าไม่ใส่ `move` Rust จะพยายามให้ Closure borrow `num` จาก scope เดิมของฟังก์ชัน `factory()`
 
-```javascript
-add();
+ปัญหาคือเมื่อ `factory()` ทำงานจบลง ตัวแปร `num` จะถูกทำลายไปพร้อมกับ stack frame ของฟังก์ชันนั้น ทำให้ Closure ที่ถูกคืนออกไปไม่สามารถอ้างถึง `num` ที่ยืมมาได้อย่างปลอดภัย
+
+ดังนั้นจึงต้องใช้ `move`:
+
+```rust
+Box::new(move |x| x + num)
 ```
-การเรียก Closure สามารถเปลี่ยนแปลง state ที่มัน capture เอาไว้ได้ ดังนั้นตัวแปร add ที่เก็บ Closure จึงต้องประกาศเป็น mut ด้วย ไม่ใช่แค่ count ที่ต้องเป็น mut เท่านั้น เพราะ Rust มองว่าการเรียก add() ในกรณีนี้เป็นการใช้งาน Closure แบบ mutable หากเขียน let add = ... ตัว add จะไม่สามารถถูกยืมแบบ mutable ตอนเรียก add() ได้ จึงเกิด error ขึ้น การแก้ปัญหาคือเปลี่ยนเป็น let mut add = ... เพื่ออนุญาตให้ Closure ถูกเรียกในลักษณะที่สามารถเปลี่ยนแปลงค่าที่มัน capture ไว้ได้
+เพื่อย้ายค่า `num` เข้าไปเก็บใน Closure environment โดยตรง ทำให้ Closure มีข้อมูลของตัวเองและสามารถถูกคืนออกจากฟังก์ชันได้อย่างปลอดภัย
 
 ---
 
