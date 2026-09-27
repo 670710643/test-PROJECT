@@ -1,6 +1,6 @@
 # 7. Common Mistakes
 
-## Mistake 1 — พยายามคืน `Fn(...)` ตรง ๆ จากฟังก์ชัน
+## Mistake 1 — [พยายามคืน `Fn(...)` ตรง ๆ จากฟังก์ชัน]
 
 **Problem**
 
@@ -80,7 +80,7 @@ fn factory() -> impl Fn(i32) -> i32 {
 
 ---
 
-## Mistake 2 — ลืมใช้ `move` ตอนคืน Closure ที่ capture ตัวแปรภายในฟังก์ชัน
+## Mistake 2 — [ลืมใช้ `move` ตอนคืน Closure ที่ capture ตัวแปรภายในฟังก์ชัน]
 
 **Problem**
 
@@ -148,7 +148,7 @@ Box::new(move |x| x + num)
 
 # 8. Exercises
 
-## Exercise 1 — Once Function
+## Exercise 1 — [Once Function]
 
 **Problem**
 
@@ -157,7 +157,6 @@ Box::new(move |x| x + num)
 **Hint**
 
 ใช้ Closure ในการเก็บสถานะ โดยเก็บผลลัพธ์ที่คำนวณได้จากการเรียกครั้งแรกไว้ภายใน Closure
-
 เนื่องจาก Closure ที่คืนออกมาต้องสามารถเปลี่ยนแปลงสถานะภายในได้ จึงสามารถใช้ `FnMut` ได้
 
 **Solution**
@@ -245,7 +244,7 @@ MySystem is ready
 
 ---
 
-## Exercise 2 — Higher-Order Iterator Filter Generator
+## Exercise 2 — [Higher-Order Iterator Filter Generator]
 
 **Problem**
 
@@ -326,3 +325,5 @@ products
 `.filter()` จะส่งแต่ละ `item` เข้ามาให้ `is_price_over_50` และ Closure จะคืน `true` หรือ `false` เพื่อกำหนดว่าจะเก็บ `item` นั้นไว้หรือไม่
 
 จุดสำคัญคือ `property` และ `condition` ถูกเก็บไว้ใน Closure ที่ `create_filter` คืนกลับมา ทำให้เราสามารถสร้าง Predicate Function ที่นำกลับมาใช้ซ้ำได้
+
+---
