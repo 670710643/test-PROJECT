@@ -152,122 +152,181 @@ Box::new(move |x| x + num)
 
 **Problem**
 
-จงเขียน Higher-Order Function ชื่อ `once(fn)` ที่รับฟังก์ชัน `fn` เข้ามา แล้วคืนค่าเป็นฟังก์ชันใหม่ที่สามารถ เรียกทำงานได้เพียงครั้งเดียวเท่านั้น
-เมื่อเรียกใช้งานครั้งแรก ให้ทำการประมวลผลและคืนค่าผลลัพธ์ของ `fn` ตามปกติ
-หากมีการเรียกใช้งานในครั้งถัด ๆ ไป ไม่ว่าจะส่งพารามิเตอร์อะไร ให้คืนค่าผลลัพธ์เดิมที่เคยคำนวณได้จากครั้งแรก โดยไม่มีการเรียกใช้ `fn` ซ้ำอีก
+จงเขียน Higher-Order Function ชื่อ `once` ที่รับ Closure `fn` เข้ามา แล้วคืนค่าเป็น Closure ใหม่ที่สามารถเรียกใช้งานฟังก์ชัน `fn` ได้เพียงครั้งเดียว
 
+เมื่อเรียกใช้งานครั้งแรก ให้ Closure ทำการประมวลผลและเก็บผลลัพธ์ที่ได้ไว้
+
+หากมีการเรียกใช้งานในครั้งถัดไป ไม่ว่าจะส่ง Parameter อะไรเข้ามา ให้คืนค่าผลลัพธ์เดิมที่คำนวณได้จากครั้งแรก โดยไม่เรียกใช้ `fn` ซ้ำอีก
 
 **Hint**
 
-ใช้ Closure ในการเก็บสถานะด้วยตัวแปร `Boolean` (เช่น `hasRun`) เพื่อเช็กว่าฟังก์ชันเคยถูกเรียกหรือยัง และเก็บตัวแปร `result` เพื่อจำผลลัพธ์จากการเรียกใช้งานครั้งแรกไว้
+ใช้ Closure ในการเก็บสถานะ โดยเก็บผลลัพธ์ที่คำนวณได้จากการเรียกครั้งแรกไว้ภายใน Closure
+
+เนื่องจาก Closure ที่คืนออกมาต้องสามารถเปลี่ยนแปลงสถานะภายในได้ จึงสามารถใช้ `FnMut` ได้
 
 **Solution**
-```javascript
-function once(fn) {
-  let hasRun = false;
-  let result;
 
-  return function (...args) {
-    if (!hasRun) {
-      result = fn(...args);
-      hasRun = true;
+```rust
+fn once<F, A, R>(mut f: F) -> impl FnMut(A) -> R
+where
+    F: FnMut(A) -> R,
+    R: Clone,
+{
+    let mut result: Option<R> = None;
+
+    move |arg| {
+        if let Some(value) = &result {
+            return value.clone();
+        }
+
+        let value = f(arg);
+        result = Some(value.clone());
+
+        value
     }
-    return result;
-  };
 }
 
-// ตัวอย่างการใช้งาน
-const initializeApp = once((appName) => {
-  console.log(`Initializing ${appName}...`);
-  return { status: 'ready', appName };
-});
+fn main() {
+    let mut initialize_app = once(|app_name: &str| {
+        println!("Initializing {}...", app_name);
+        format!("{} is ready", app_name)
+    });
 
-console.log(initializeApp('MySystem'));
-// Output: "Initializing MySystem..." 
-// Returns: { status: 'ready', appName: 'MySystem' }
+    println!("{}", initialize_app("MySystem"));
+    println!("{}", initialize_app("OtherSystem"));
+}
+```
 
-console.log(initializeApp('OtherSystem'));
-// Output: (ไม่มีการพิมพ์)
-// Returns: { status: 'ready', appName: 'MySystem' }
+**Output**
+
+```text
+Initializing MySystem...
+MySystem is ready
+MySystem is ready
 ```
 
 **Explanation**
 
-1. `once` สร้างขอบเขตตัวแปรด้วย Closure เพื่อเก็บตัวแปร `hasRun` และ `result`
+1. `once` เป็น Higher-Order Function เพราะรับ Closure `f` เข้ามาเป็น Argument และคืน Closure กลับออกมา
 
-2. ฟังก์ชันที่ถูกคืนค่ากลับไปจะตรวจสอบ `hasRun` ก่อนเสมอ
+2. ตัวแปร `result` ใช้สำหรับเก็บผลลัพธ์จากการเรียก `f` ครั้งแรก
 
-3. ในการเรียกครั้งแรก `hasRun` ยังเป็น `false` ทำให้โค้ดรันฟังก์ชัน `fn(...args)` บันทึกผลลัพธ์ลง `result` แล้วเปลี่ยน `hasRun` เป็น `true`
+   ```rust
+   let mut result: Option<R> = None;
+   ```
 
-4. การเรียกครั้งถัดไป `hasRun` เป็น `true` แล้ว ระบบจะข้ามการประมวลผล `fn` และคืนค่า `result` เดิมทันที
+   ในตอนเริ่มต้น `result` ยังไม่มีค่า จึงเป็น `None`
+
+3. `move` ทำให้ Closure ที่ถูกคืนออกมาสามารถเป็นเจ้าของ `result` และ `f` ได้เอง
+
+   ```rust
+   move |arg| {
+       ...
+   }
+   ```
+
+4. ในการเรียกครั้งแรก `result` เป็น `None` ดังนั้น `f(arg)` จะถูกเรียก:
+
+   ```rust
+   let value = f(arg);
+   ```
+
+   จากนั้นผลลัพธ์จะถูกเก็บไว้ใน `result`
+
+5. ในการเรียกครั้งถัดไป `result` มีค่าแล้ว:
+
+   ```rust
+   if let Some(value) = &result {
+       return value.clone();
+   }
+   ```
+
+   Closure จึงไม่เรียก `f` อีก แต่คืนผลลัพธ์เดิมออกมา
+
+6. `R: Clone` จำเป็นในตัวอย่างนี้ เพราะผลลัพธ์ `R` ต้องสามารถถูกนำกลับมาคืนซ้ำในการเรียกครั้งถัดไป Closure ที่คืนออกมาจึงมี State ของตัวเอง:
+
+แนวคิดสำคัญของ Exercise นี้คือ **Closure สามารถเก็บ State และรักษา State นั้นไว้ระหว่างการเรียกใช้งานแต่ละครั้ง** ซึ่งเป็นหนึ่งในคุณสมบัติสำคัญของ Closure ใน Rust
 
 ---
 
-## Exercise 2 — Higher-Order Array Filter Generator
+## Exercise 2 — Higher-Order Iterator Filter Generator
 
 **Problem**
 
-จงเขียนฟังก์ชัน `createFilter(property, conditionFn)` ที่รับชื่อ `property` ของ Object และฟังก์ชันเงื่อนไข `conditionFn` จากนั้นคืนค่าเป็น Predicate Function ที่สามารถนำไปใช้กับ `.filter()` ของ Array เพื่อคัดกรองข้อมูลตามเงื่อนไขที่กำหนดได้
+จงเขียน Higher-Order Function ชื่อ `create_filter(property, condition)` ที่รับ Closure สำหรับดึงค่าจาก Object และฟังก์ชันเงื่อนไข `condition` จากนั้นคืนค่าเป็น Predicate Function ที่สามารถนำไปใช้กับ `.filter()` ของ Iterator เพื่อคัดกรองข้อมูลตามเงื่อนไขที่กำหนดได้
 
 **Hint**
 
-ใช้หลักการ Higher-Order Function และ Closure โดยฟังก์ชัน `createFilter` จะคืนค่าฟังก์ชันที่รับออบเจกต์ `item` เข้ามา แล้วนำค่า `item[property]` ไปส่งต่อให้ `conditionFn(val)` เพื่อรีเทิร์นค่า Boolean (`true`/`false`)
+ใช้หลักการ Higher-Order Function และ Closure โดยฟังก์ชัน `create_filter` จะรับ Closure `property` สำหรับดึงค่าที่ต้องการจาก `item` และรับ Closure `condition` สำหรับตรวจสอบค่านั้น จากนั้นคืน Closure ที่รับ `item` และส่งค่าที่ดึงออกมาให้ `condition`
 
 **Solution**
 
-```javascript
-function createFilter(property, conditionFn) {
-  return function (item) {
-    // เข้าถึง property ของ item แล้วส่งให้ conditionFn ประมวลผล
-    return conditionFn(item[property]);
-  };
+```rust
+fn create_filter<T, V, P>(
+    property: impl Fn(&T) -> V,
+    condition: P,
+) -> impl Fn(&T) -> bool
+where
+    P: Fn(V) -> bool,
+{
+    move |item| {
+        let value = property(item);
+        condition(value)
+    }
 }
 
-// ตัวอย่างการใช้งาน
-const products = [
-  { name: 'Laptop', price: 1200 },
-  { name: 'Mouse', price: 25 },
-  { name: 'Keyboard', price: 75 }
-];
+fn main() {
+    let products = vec![
+        ("Laptop", 1200),
+        ("Mouse", 25),
+        ("Keyboard", 75),
+    ];
 
-// สร้าง Filter Reusable Functions
-const isPriceOver50 = createFilter('price', (price) => price > 50);
-const isNameStartsWithK = createFilter('name', (name) => name.startsWith('K'));
+    let is_price_over_50 =
+        create_filter(|product: &(&str, i32)| product.1, |price| price > 50);
 
-console.log(products.filter(isPriceOver50));
-// Output: [ { name: 'Laptop', price: 1200 }, { name: 'Keyboard', price: 75 } ]
+    let result: Vec<_> = products
+        .iter()
+        .filter(|product| is_price_over_50(product))
+        .collect();
 
-console.log(products.filter(isNameStartsWithK));
-// Output: [ { name: 'Keyboard', price: 75 } ]
+    println!("{:?}", result);
+}
+```
+
+**Output**
+
+```text
+[("Laptop", 1200), ("Keyboard", 75)]
 ```
 
 **Explanation**
 
-1. `createFilter` ทำหน้าที่เป็น Factory สร้างฟังก์ชันสำหรับคัดกรอง โดยจำค่า `property` และ `conditionFn` ไว้ใน Closure
+1. `create_filter` เป็น Higher-Order Function เพราะรับ Closure เข้ามาเป็น Argument และคืน Closure กลับออกมา
 
-2. ฟังก์ชันที่ถูกคืนค่ากลับมาจะรับ `item จาก` `.filter()` ทีละตัว แล้วดึงค่า `item[property]` ออกมา
+2. `property` ทำหน้าที่กำหนดว่าเราต้องการดึงข้อมูลส่วนไหนจาก `item`
 
-3. ส่งค่านั้นเข้าไปใน `conditionFn` เพื่อคืนค่ากลับมาเป็น `true` หรือ `false` ให้กับ `.filter()`
+3. `condition` ทำหน้าที่ตรวจสอบค่าที่ `property` ดึงออกมา และต้องคืนค่า `bool`
 
-4. วิธีนี้ช่วยให้เราเขียนโค้ดสไตล์ Functional Programming ที่อ่านง่าย และสามารถนำ Filter Logic กลับมาใช้ซ้ำ (Reusable) ได้อย่างยืดหยุ่น
+4. `create_filter` คืน Closure นี้ออกมา:
 
----
+```rust
+move |item| {
+    let value = property(item);
+    condition(value)
+}
+```
 
+Closure ที่คืนออกมาจึงมีหน้าที่รับ `item` แล้วนำไปผ่านขั้นตอน `property` → `condition`
 
+5. เมื่อใช้กับ `.filter()`:
 
+```rust
+products
+    .iter()
+    .filter(|product| is_price_over_50(product))
+```
 
+`.filter()` จะส่งแต่ละ `item` เข้ามาให้ `is_price_over_50` และ Closure จะคืน `true` หรือ `false` เพื่อกำหนดว่าจะเก็บ `item` นั้นไว้หรือไม่
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+จุดสำคัญคือ `property` และ `condition` ถูกเก็บไว้ใน Closure ที่ `create_filter` คืนกลับมา ทำให้เราสามารถสร้าง Predicate Function ที่นำกลับมาใช้ซ้ำได้
