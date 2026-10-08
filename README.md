@@ -52,12 +52,12 @@ java Main jobs_standard.csv priority 5 1 2 | Tee-Object ..\logs\04_priority_work
 
 ### 05: Printer Priority & Printer Permit = 1
 ```powershell
-java Main jobs_printer.csv fcfs 3 1 2 | Tee-Object ..\logs\05_printer1.txt
+java Main jobs_printer.csv priority 3 1 2 | Tee-Object ..\logs\05_printer1.txt
 ```
 
 ### 06: Printer Priority & Printer Permit = 2
 ```powershell
-java Main jobs_printer.csv fcfs 3 2 2 | Tee-Object ..\logs\06_printer2.txt
+java Main jobs_printer.csv priority 3 2 2 | Tee-Object ..\logs\06_printer2.txt
 ```
 
 ### 07: Standard Priority & Priority Repeat
